@@ -6,9 +6,11 @@
 
 using std::vector;
 
-typedef vector<vector<float> > dataset;
+typedef vector<float>  vectorf;
+typedef vector<vector<float> >  datasetf;
+typedef vector<vector<int> >  dataseti;
 
-void print(vector<vector<float> > &data){
+void print(datasetf &data){
 	for(int i = 0; i < data.size(); ++i){
 		for(int j = 0; j < data[i].size(); ++j){
 			std::cout << data[i][j];
@@ -19,7 +21,7 @@ void print(vector<vector<float> > &data){
 	}
 }
 
-void print(vector<vector<float> > &data, vector<vector<int> > &index){
+void print(datasetf &data, dataseti &index){
 	for(int i = 0; i < index.size(); ++i){
 		std::cout << index[i].size() << '\n';
 		for(int j = 0; j < index[i].size(); ++j){
@@ -33,7 +35,7 @@ void print(vector<vector<float> > &data, vector<vector<int> > &index){
 	}
 }
 
-float vdistance(vector<float> &v1, vector<float> &v2){
+float vdistance(vectorf &v1, vectorf &v2){
 	int length = v1.size();
 	if(length > v2.size())
 		length = v2.size();
@@ -46,7 +48,7 @@ float vdistance(vector<float> &v1, vector<float> &v2){
 
 }
 
-int equal(vector<vector<float> > &a, vector<vector<float> > &b){
+int equal(datasetf &a, datasetf &b){
 	if(a.size() != b.size())
 		return 0;
 	else if(a.size() == 0 && b.size() == 0)
@@ -64,8 +66,8 @@ int equal(vector<vector<float> > &a, vector<vector<float> > &b){
 	return 1;
 }
 
-vector<vector<float> > random_points(int num){
-	vector<vector<float> > points(num);
+datasetf random_points(int num){
+	datasetf points(num);
 	for(int i = 0; i < num; ++i){
 		for(int j = 0; j < 2; ++j)
 			points[i].push_back(rand()%1000);
@@ -74,14 +76,14 @@ vector<vector<float> > random_points(int num){
 	return points;
 }
 
-int kmeans(vector<vector<float> > &points, 
-			vector<vector<float> > &centers, 
-			vector<vector<int> > &clusters,
+int kmeans(datasetf &points, 
+			datasetf &centers, 
+			dataseti &clusters,
 			int k = 8, int iterations = 100){
 
 	// get range of each dimension
 	int ds = points[0].size();
-	vector<vector<float> > ranges(ds);
+	datasetf ranges(ds);
 	for(int i = 0; i < ds; ++i){
 		float max = points[0][i];
 		float min = points[0][i];
@@ -107,7 +109,7 @@ int kmeans(vector<vector<float> > &points,
 		}
 	}
 
-	vector<vector<float> > newcenters(k);
+	datasetf newcenters(k);
 	while(iterations > 0){
 		iterations -= 1;
 		
@@ -156,10 +158,10 @@ int kmeans(vector<vector<float> > &points,
 	return 0;
 }
 
-float cost(vector<vector<float> > &points, vector<float> &sol){
+float cost(datasetf &points, vectorf &sol){
 	float total = 0.0;
 	for(int i = 0; i < sol.size()/2; ++i){
-		vector<float> ss;
+		vectorf ss;
 		ss.push_back(sol[2*i]);
 		ss.push_back(sol[2*i+1]);
 		for(int j = 0; j < points.size(); ++j){
@@ -169,15 +171,15 @@ float cost(vector<vector<float> > &points, vector<float> &sol){
 	return total;
 }
 
-int annealing(vector<vector<float> > &points, 
-				vector<float> &sol,
-				vector<vector<float> > &annel,
+int annealing(datasetf &points, 
+				vectorf &sol,
+				datasetf &annel,
 				float step = 5.0,
 				float T=10000.0, 
 				float cool=0.95){
 
 	float bestcost = cost(points, sol);
-	vector<float> bestsol = sol;
+	vectorf bestsol = sol;
 
 	while(T > 0.1){
 		int index = rand() % sol.size();
@@ -192,7 +194,7 @@ int annealing(vector<vector<float> > &points,
 		else
 			bestsol[index] -= change;
 
-		annel.push_back(vector<float>(3));
+		annel.push_back(vectorf(3));
 		annel[annel.size()-1][0] = T;
 		annel[annel.size()-1][1] = curcost;
 		annel[annel.size()-1][2] = bestcost;
@@ -203,29 +205,29 @@ int annealing(vector<vector<float> > &points,
 	return 1;
 }
 
-int genetic(vector<vector<float> > &points, vector<vector<float> > &sol){
+int genetic(datasetf &points, vectorf &sol){
 
 	return 1;
 }
 
 int main(){
 	srand(time(0));
-	vector<vector<float> > points = random_points(10000);
-	vector<vector<float> > centers;
-	vector<vector<int> > clusters;
+	datasetf points = random_points(10000);
+	datasetf centers;
+	dataseti clusters;
 
 	kmeans(points, centers, clusters, 8, 100);
 	
-	vector<float> sol;
+	vectorf sol;
 	for(int i = 0; i < centers.size(); ++i){
 		for(int j = 0; j < centers[i].size(); ++j){
 			sol.push_back(centers[i][j]);
 		}
 	}
-	vector<vector<float> > annel;
+	datasetf annel;
 	annealing(points, sol, annel);
 
-	vector<vector<float> > bestsol(sol.size()/2);
+	datasetf bestsol(sol.size()/2);
 	for(int i = 0; i < sol.size()/2; ++i){
 		bestsol[i].push_back(sol[2*i]);
 		bestsol[i].push_back(sol[2*i+1]);
