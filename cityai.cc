@@ -3,12 +3,19 @@
 #include <math.h>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 using std::vector;
+using std::sort;
 
 typedef vector<float>  vectorf;
 typedef vector<vector<float> >  datasetf;
 typedef vector<vector<int> >  dataseti;
+
+struct score_item{
+	float score;
+	vectorf sol;
+};
 
 void print(datasetf &data){
 	for(int i = 0; i < data.size(); ++i){
@@ -19,6 +26,15 @@ void print(datasetf &data){
 		}
 		std::cout << '\n';
 	}
+}
+
+void print(vectorf &vec){
+	for(int i = 0; i < vec.size(); ++i){
+		std::cout << vec[i];
+		if(i != vec.size()-1)
+			std::cout << ',';
+	}
+	std::cout << '\n';
 }
 
 void print(datasetf &data, dataseti &index){
@@ -165,7 +181,7 @@ float cost(datasetf &points, vectorf &sol){
 		ss.push_back(sol[2*i]);
 		ss.push_back(sol[2*i+1]);
 		for(int j = 0; j < points.size(); ++j){
-			total += -1000.0 / vdistance(ss, points[j]);
+			total += -100.0 / (vdistance(ss, points[j])+1);
 		}
 	}
 	return total;
@@ -173,7 +189,7 @@ float cost(datasetf &points, vectorf &sol){
 
 int annealing(datasetf &points, 
 				vectorf &sol,
-				datasetf &annel,
+				datasetf &record,
 				float step = 5.0,
 				float T=10000.0, 
 				float cool=0.95){
@@ -194,10 +210,10 @@ int annealing(datasetf &points,
 		else
 			bestsol[index] -= change;
 
-		annel.push_back(vectorf(3));
-		annel[annel.size()-1][0] = T;
-		annel[annel.size()-1][1] = curcost;
-		annel[annel.size()-1][2] = bestcost;
+		record.push_back(vectorf(3));
+		record[record.size()-1][0] = T;
+		record[record.size()-1][1] = curcost;
+		record[record.size()-1][2] = bestcost;
 
 		T *= cool;
 	}
@@ -205,7 +221,74 @@ int annealing(datasetf &points,
 	return 1;
 }
 
-int genetic(datasetf &points, vectorf &sol){
+int sort_compare(score_item *a, score_item *b){
+	return (a->score < b->score);
+}
+
+int genetic(datasetf &points, vectorf &sol, datasetf &record, float step=5,
+			int popsize=50, float mutprob=0.2, float elite=0.2,
+			int iterations=100){
+	
+	// random gen solutions
+	score_item **scores = new score_item*[popsize];
+	scores[0] = new score_item();
+	scores[0]->sol = sol;
+	scores[0]->score = cost(points, sol);
+
+	for(int i = 1; i < popsize; ++i){
+		scores[i] = new score_item();
+		for(int j = 0; j < sol.size(); ++j){
+			scores[i]->sol.push_back(random()%1000);
+		}
+		scores[i]->score = cost(points, scores[i]->sol);
+	}
+
+	int elitesize = popsize * elite;
+	score_item *best = scores[0];	
+	for(int i = 0; i < iterations; ++i){
+		// sort the solutions according to cost asc
+		sort(scores, scores+popsize, sort_compare);
+
+		if(i > 10 && best->score == scores[0]->score)
+			break;
+		else if(best->score > scores[0]->score)
+			best = scores[0];
+
+		record.push_back(vectorf(3));
+		record[record.size()-1][0] = i;
+		record[record.size()-1][1] = scores[0]->score;
+		record[record.size()-1][2] = best->score;
+		// get the top elite and generate the rest by muating and crossover
+		for(int j = elitesize; j < popsize; ++j){
+			if((random()%1000)/1000.0 < mutprob){
+				// gen a solution by mutating
+				int index = random() % sol.size();
+				if(random()%1000 < 500)
+					scores[j]->sol[index] += step;
+				else
+					scores[j]->sol[index] -= step;
+				scores[j]->score = cost(points, scores[j]->sol);
+			}else{
+				// gen a solution by crossover
+				int c1 = random() % j;
+				int c2 = random() % j;
+				int middle = random() % sol.size();
+				for(int k = 0; k < middle; ++k)
+					scores[j]->sol[k] = scores[c1]->sol[k];
+				for(int k = middle; k < sol.size(); ++k)
+					scores[j]->sol[k] = scores[c2]->sol[k];
+
+				scores[j]->score = cost(points, scores[j]->sol);
+			}
+		}
+	}
+
+	sol = best->sol;
+	// free memory
+	for(int i = 0; i < popsize; ++i){
+		delete scores[i];
+	}
+	delete [] scores;
 
 	return 1;
 }
@@ -224,8 +307,10 @@ int main(){
 			sol.push_back(centers[i][j]);
 		}
 	}
-	datasetf annel;
-	annealing(points, sol, annel);
+
+	datasetf record;
+//	annealing(points, sol, record);
+	genetic(points, sol, record);
 
 	datasetf bestsol(sol.size()/2);
 	for(int i = 0; i < sol.size()/2; ++i){
@@ -242,6 +327,6 @@ int main(){
 	std::cout << bestsol.size() << '\n';
 	print(bestsol);
 
-	std::cout << annel.size() << '\n';
-	print(annel);
+	std::cout << record.size() << '\n';
+	print(record);
 }
